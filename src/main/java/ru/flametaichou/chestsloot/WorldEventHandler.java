@@ -18,21 +18,14 @@ import java.util.*;
 
 public class WorldEventHandler {
 
-    private Random random = new Random();
-
-    @SubscribeEvent(priority = EventPriority.LOW)
-    public void savingLists(TickEvent.WorldTickEvent event) {
-        if (event.world.getWorldTime() % 1000 == 0) {
-            LootChestsBase.writeLists(event.world.getWorldTime());
-        }
-    }
+    private static Random random = new Random();
 
     @SubscribeEvent(priority = EventPriority.LOW)
     public void checkingSigns(TickEvent.WorldTickEvent event) {
         if (event.world.getWorldTime() % 20 == 0) {
             for (Iterator<TileEntitySign> iterator = LootChestsBase.tileEntitySigns.iterator(); iterator.hasNext(); ) {
                 TileEntitySign sign = iterator.next();
-                if (sign.signText[0].contains("[Loot]") || sign.signText[0].contains("[List]")) {
+                if (sign.signText[0].toLowerCase().contains("[loot]") || sign.signText[0].toLowerCase().contains("[list]")) {
                     EntityPlayer player = sign.func_145911_b();
                     if (Objects.isNull(player)) {
                         sign.getWorldObj().setBlockToAir(sign.xCoord, sign.yCoord, sign.zCoord);
@@ -44,7 +37,7 @@ public class WorldEventHandler {
                         player.inventory.addItemStackToInventory(new ItemStack(Items.sign, 1));
                         player.addChatComponentMessage(new ChatComponentText("You cant create Loot Signs!"));
                     } else {
-                        if (sign.signText[0].contains("[Loot]")) {
+                        if (sign.signText[0].toLowerCase().contains("[loot]")) {
                             try {
                                 String listName = sign.signText[1];
                                 long cooldown = Long.parseLong(sign.signText[2]);
@@ -58,7 +51,7 @@ public class WorldEventHandler {
                             } catch (Exception e) {
                                 player.addChatComponentMessage(new ChatComponentText("Error! Chest Sign not created."));
                             }
-                        } else if (sign.signText[0].contains("[List]")) {
+                        } else if (sign.signText[0].toLowerCase().contains("[list]")) {
                             try {
                                 String listName = sign.signText[1];
                                 LootList lootList = new LootList(listName, sign.xCoord, sign.yCoord, sign.zCoord, sign.getWorldObj().provider.dimensionId);
@@ -85,89 +78,93 @@ public class WorldEventHandler {
 
     @SubscribeEvent(priority = EventPriority.LOW)
     public void fillChests(TickEvent.WorldTickEvent event) {
-        if (event.world.getWorldTime() % 100 == 0) {
-            for (Iterator<ChestSign> iterator = LootChestsBase.chestSignsService.getChestGigns().iterator(); iterator.hasNext(); ) {
-                ChestSign chestSign = iterator.next();
-                World world = LootChestsBase.getWorld(chestSign.getWorldId());
-                long cooldownInTicks = chestSign.getCooldown()  * 20;
-                Logger.debug("worldtime " + world.getWorldTime() + " refreshTime " + chestSign.getRefreshTime() + " cooldown " + cooldownInTicks);
-                if (world.getWorldTime() - chestSign.getRefreshTime() > cooldownInTicks) {
-                    // Значит его надо наполнить
-                    // Достаем список предметов
-                    LootList lootList = LootChestsBase.lootListsService.findByName(chestSign.getListName());
-                    if (Objects.isNull(lootList)) {
+        if (event.world.getWorldTime() % 1000 == 0) {
+            refreshChests();
+        }
+    }
+
+    public static void refreshChests() {
+        for (Iterator<ChestSign> iterator = LootChestsBase.chestSignsService.getChestGigns().iterator(); iterator.hasNext(); ) {
+            ChestSign chestSign = iterator.next();
+            World world = LootChestsBase.getWorld(chestSign.getWorldId());
+            long cooldownInTicks = chestSign.getCooldown() * 60 * 20;
+            Logger.debug("worldtime " + world.getWorldTime() + " refreshTime " + chestSign.getRefreshTime() + " cooldown " + cooldownInTicks);
+            if (world.getWorldTime() - chestSign.getRefreshTime() > cooldownInTicks) {
+                // Значит его надо наполнить
+                // Достаем список предметов
+                LootList lootList = LootChestsBase.lootListsService.findByName(chestSign.getListName());
+                if (Objects.isNull(lootList)) {
+                    return;
+                }
+                World lootListWorld = LootChestsBase.getWorld(lootList.getWorldId());
+                // Берем вещи из всех контейнеров рядом с табличкой-листом
+                List<ItemStack> items = new ArrayList<ItemStack>();
+                List<IInventory> lootListInventories = findContainers(lootList.getX(), lootList.getY(), lootList.getZ(), lootListWorld);
+                for (IInventory lootInventory : lootListInventories) {
+                    for (int i = 0; i < lootInventory.getSizeInventory(); i++) {
+                        if (Objects.nonNull(lootInventory.getStackInSlot(i))) {
+                            ItemStack is = lootInventory.getStackInSlot(i).copy();
+                            int lootCount = randomBetween(1, is.stackSize);
+                            is.stackSize = lootCount;
+                            items.add(is);
+                        }
+                    }
+                }
+
+                // Теперь ищем все контейнеры в радиусе 1 блока
+                List<IInventory> inventories = findContainers(chestSign.getX(), chestSign.getY(), chestSign.getZ(), world);
+                for (IInventory inventory : inventories) {
+                    // Очистка
+                    for (int i = 0; i < inventory.getSizeInventory(); i++) {
+                        inventory.setInventorySlotContents(i, null);
+                    }
+                    int min = chestSign.getMaxCount() > chestSign.getMinCount() ? chestSign.getMinCount() : 1;
+                    int count = randomBetween(min, chestSign.getMaxCount());
+
+                    // Если слотов меньше чем нужно положить вещей
+                    if (count > inventory.getSizeInventory()) {
+                        count = inventory.getSizeInventory();
+                    }
+
+                    if (items.size() < 1) {
+                        Logger.error("can't find items in Loot List! Name: " + lootList.getName());
                         return;
                     }
-                    World lootListWorld = LootChestsBase.getWorld(lootList.getWorldId());
-                    // Берем вещи из всех контейнеров рядом с табличкой-листом
-                    List<ItemStack> items = new ArrayList<ItemStack>();
-                    List<IInventory> lootListInventories = findContainers(lootList.getX(), lootList.getY(), lootList.getZ(), lootListWorld);
-                    for (IInventory lootInventory : lootListInventories) {
-                        for (int i = 0; i < lootInventory.getSizeInventory(); i++) {
-                            if (Objects.nonNull(lootInventory.getStackInSlot(i))) {
-                                ItemStack is = lootInventory.getStackInSlot(i).copy();
-                                int lootCount = randomBetween(1, is.stackSize);
-                                is.stackSize = lootCount;
-                                items.add(is);
+
+                    // Выбор рандомных слотов
+                    Set<Integer> randomSlots = new HashSet<Integer>();
+                    while (randomSlots.size() < count) {
+                        randomSlots.add(randomBetween(0, inventory.getSizeInventory() - 1));
+                    }
+                    Object[] randomSlotsArray = randomSlots.toArray();
+
+                    // Заполнение
+                    for (int i = 0; i < count; i++) {
+                        int itemNum = randomBetween(0, items.size() - 1);
+                        if (ConfigHelper.percentBySlot) {
+                            // Чем выше предмет в сундуке тем выше вероятность спавна
+                            // У самого последнего предмета в списке вероятность появления 5% и растет к первому элементу списка
+                            if (Math.random() > 0.05) {
+                                itemNum = randomBetween(0, itemNum);
                             }
                         }
+
+                        inventory.setInventorySlotContents((Integer)randomSlotsArray[i], items.get(itemNum));
                     }
 
-                    // Теперь ищем все контейнеры в радиусе 1 блока
-                    List<IInventory> inventories = findContainers(chestSign.getX(), chestSign.getY(), chestSign.getZ(), world);
-                    for (IInventory inventory : inventories) {
-                        // Очистка
-                        for (int i = 0; i < inventory.getSizeInventory(); i++) {
-                            inventory.setInventorySlotContents(i, null);
-                        }
-                        int min = chestSign.getMaxCount() > chestSign.getMinCount() ? chestSign.getMinCount() : 1;
-                        int count = randomBetween(min, chestSign.getMaxCount());
-
-                        // Если слотов меньше чем нужно положить вещей
-                        if (count > inventory.getSizeInventory()) {
-                            count = inventory.getSizeInventory();
-                        }
-
-                        if (items.size() < 1) {
-                            Logger.error("can't find items in Loot List! Name: " + lootList.getName());
-                            return;
-                        }
-
-                        // Выбор рандомных слотов
-                        Set<Integer> randomSlots = new HashSet<Integer>();
-                        while (randomSlots.size() < count) {
-                            randomSlots.add(randomBetween(0, inventory.getSizeInventory() - 1));
-                        }
-                        Object[] randomSlotsArray = randomSlots.toArray();
-
-                        // Заполнение
-                        for (int i = 0; i < count; i++) {
-                            int itemNum = randomBetween(0, items.size() - 1);
-                            if (ConfigHelper.percentBySlot) {
-                                // Чем выше предмет в сундуке тем выше вероятность спавна
-                                // У самого последнего предмета в списке вероятность появления 5% и растет к первому элементу списка
-                                if (Math.random() > 0.05) {
-                                    itemNum = randomBetween(0, itemNum);
-                                }
-                            }
-
-                            inventory.setInventorySlotContents((Integer)randomSlotsArray[i], items.get(itemNum));
-                        }
-
-                        chestSign.setRefreshTime(world.getWorldTime());
-                    }
+                    chestSign.setRefreshTime(world.getWorldTime());
                 }
             }
         }
     }
 
-    public int randomBetween(int min, int max) {
+    public static int randomBetween(int min, int max) {
         return random.nextInt((max - min) + 1) + min;
     }
 
-    private List<IInventory> findContainers(int eventx, int eventy, int eventz, World world) {
+    private static List<IInventory> findContainers(int eventx, int eventy, int eventz, World world) {
         List<IInventory> inventories = new ArrayList<IInventory>();
-        int radius = 1;
+        int radius = 2;
         for (int x = eventx - radius; x <= eventx + radius; x++) {
             for (int y = eventy - radius; y <= eventy + radius; y++) {
                 for (int z = eventz - radius; z <= eventz + radius; z++) {

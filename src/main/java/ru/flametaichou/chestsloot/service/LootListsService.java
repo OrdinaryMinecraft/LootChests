@@ -1,5 +1,7 @@
 package ru.flametaichou.chestsloot.service;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntitySign;
 import ru.flametaichou.chestsloot.LootChestsBase;
 import ru.flametaichou.chestsloot.Logger;
@@ -26,6 +28,7 @@ public class LootListsService implements ILootLists {
             if (lootList.getName() != "") {
                 lists.getLists().add(lootList);
                 Logger.debug("lootList " + word + "! Coordinates: " + Logger.getCoordinatesString(lootList));
+                LootChestsBase.writeLists(MinecraftServer.getServer().getEntityWorld().getWorldTime());
                 return true;
             } else {
                 Logger.debug("lootList not " + word + ": not all parameters present! Coordinates: " + Logger.getCoordinatesString(lootList));
@@ -44,6 +47,7 @@ public class LootListsService implements ILootLists {
                     list.getZ() == l.getZ()) {
                 iterator.remove();
                 Logger.debug("list removed! Coordinates: " + Logger.getCoordinatesString(list));
+                LootChestsBase.writeLists(MinecraftServer.getServer().getEntityWorld().getWorldTime());
             }
         }
     }

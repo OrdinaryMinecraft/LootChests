@@ -32,16 +32,16 @@ public class PlayerInteractHandler {
     }
 
     private void checkForSigns(int eventx, int eventy, int eventz, World world) {
-        int radius = 1;
+        int radius = 2;
         for (int x = eventx - radius; x <= eventx + radius; x++) {
             for (int y = eventy - radius; y <= eventy + radius; y++) {
                 for (int z = eventz - radius; z <= eventz + radius; z++) {
                     if (world.getBlock(x, y ,z) == Blocks.standing_sign || world.getBlock(x, y ,z) == Blocks.wall_sign) {
                         TileEntitySign sign = (TileEntitySign) world.getTileEntity(x, y ,z);
                         String[] signText = sign.signText;
-                        if (signText[0].contains("[Loot]")) {
+                        if (signText[0].toLowerCase().contains("[loot]")) {
                             addChestSign(signText, x, y ,z, world.provider.dimensionId);
-                        } else if (signText[0].contains("[List]")) {
+                        } else if (signText[0].toLowerCase().contains("[list]")) {
                             addList(signText, x, y ,z, world.provider.dimensionId);
                         }
                     }
@@ -140,9 +140,9 @@ public class PlayerInteractHandler {
         if (event.block == Blocks.standing_sign || event.block == Blocks.wall_sign) {
             TileEntitySign sign = (TileEntitySign) event.world.getTileEntity(event.x, event.y ,event.z);
             String[] signText = sign.signText;
-            if (signText[0].contains("[Loot]")) {
+            if (signText[0].toLowerCase().contains("[loot]")) {
                 removeChestSign(signText, event.x, event.y ,event.z, event.world.provider.dimensionId, event.getPlayer());
-            } else if (signText[0].contains("[List]")) {
+            } else if (signText[0].toLowerCase().contains("[list]")) {
                 removeList(signText, event.x, event.y ,event.z, event.world.provider.dimensionId, event.getPlayer());
             }
         }

@@ -1,6 +1,7 @@
 package ru.flametaichou.chestsloot.service;
 
 import ru.flametaichou.chestsloot.Logger;
+import ru.flametaichou.chestsloot.WorldEventHandler;
 import ru.flametaichou.chestsloot.model.ChestSign;
 import ru.flametaichou.chestsloot.model.LootList;
 
@@ -62,6 +63,7 @@ public class ChestSignsService implements IChestSigns {
                     chestSign.getMinCount() != 0) {
                 chestSigns.add(chestSign);
                 Logger.debug("chestSign " + word + "! Coordinates: " + Logger.getCoordinatesString(chestSign));
+                WorldEventHandler.refreshChests();
                 return true;
             } else {
                 Logger.debug("chestSign not " + word + ": not all parameters present! Coordinates: " + Logger.getCoordinatesString(chestSign));

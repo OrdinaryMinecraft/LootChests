@@ -21,7 +21,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@Mod (modid = "chestsloot", name = "Chests Loot", version = "0.1")
+@Mod (modid = "chestsloot", name = "Chests Loot", version = "0.1", acceptableRemoteVersions = "*")
 
 public class LootChestsBase {
 
@@ -52,7 +52,7 @@ public class LootChestsBase {
 			Unmarshaller unmarshaller = jc.createUnmarshaller();
 			File file = new File("lists.xml");
 			if (file.exists()) {
-				lootListsService.setLootListsXML((LootListsXml) unmarshaller.unmarshal(new FileReader("lists.xml")));
+				lootListsService.setLootListsXML((LootListsXml) unmarshaller.unmarshal(new FileReader("config/lists.xml")));
 				for (LootList list : lootListsService.getLootListsXML().getLists()) {
 					Logger.log("List loaded: " + list.getName());
 				}
@@ -71,13 +71,14 @@ public class LootChestsBase {
 		}
 	}
 
+	// TODO: сохранение списков на создании, а не по таймеру!
 	public static void writeLists(long time) {
 		if (lastSaveTime != time) {
 			try {
 				JAXBContext jc = JAXBContext.newInstance(LootListsXml.class);
 				Marshaller marshaller = jc.createMarshaller();
 				marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-				marshaller.marshal(lootListsService.getLootListsXML(), new FileWriter("lists.xml"));
+				marshaller.marshal(lootListsService.getLootListsXML(), new FileWriter("config/lists.xml"));
 			} catch (JAXBException e) {
 				Logger.error("can't write to lists.xml! Reason: " + e.getCause());
 				e.printStackTrace();
