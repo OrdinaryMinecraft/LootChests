@@ -8,6 +8,7 @@ public class Logger {
     private static final String prefix = "[LootChests] ";
     private static final String prefixInfo = "(INFO) ";
     private static final String prefixEror= "(ERROR) ";
+    private static final String preffixDebug= "(DEBUG) ";
 
     public static void log(String string) {
         System.out.println(prefix + prefixInfo + string);
@@ -15,6 +16,10 @@ public class Logger {
 
     public static void error(String string) {
         System.out.println(prefix + prefixEror + string);
+    }
+
+    public static void debug(String string) {
+        if (ConfigHelper.debugMode) System.out.println(prefix + preffixDebug + string);
     }
 
     public static String getCoordinatesString(int x, int y, int z) {

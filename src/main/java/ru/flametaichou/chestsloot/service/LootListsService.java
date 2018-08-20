@@ -1,11 +1,13 @@
 package ru.flametaichou.chestsloot.service;
 
+import net.minecraft.tileentity.TileEntitySign;
 import ru.flametaichou.chestsloot.LootChestsBase;
 import ru.flametaichou.chestsloot.Logger;
 import ru.flametaichou.chestsloot.model.LootList;
 import ru.flametaichou.chestsloot.model.LootListsXml;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class LootListsService implements ILootLists {
 
@@ -18,15 +20,15 @@ public class LootListsService implements ILootLists {
     @Override
     public boolean addLootList(LootList lootList, boolean created) {
         if (LootChestsBase.lootListsService.listExist(lootList)) {
-            Logger.log("list already exist. Coordinates: " + Logger.getCoordinatesString(lootList.getX(), lootList.getY(), lootList.getZ()));
+            Logger.debug("list already exist. Coordinates: " + Logger.getCoordinatesString(lootList));
         } else {
             String word = created ? "created" : "loaded";
             if (lootList.getName() != "") {
                 lists.getLists().add(lootList);
-                Logger.log("lootList " + word + "! Coordinates: " + Logger.getCoordinatesString(lootList.getX(), lootList.getY() ,lootList.getZ()));
+                Logger.debug("lootList " + word + "! Coordinates: " + Logger.getCoordinatesString(lootList));
                 return true;
             } else {
-                Logger.log("lootList not " + word + ": not all parameters present! Coordinates: " + Logger.getCoordinatesString(lootList.getX(), lootList.getY() ,lootList.getZ()));
+                Logger.debug("lootList not " + word + ": not all parameters present! Coordinates: " + Logger.getCoordinatesString(lootList));
             }
         }
         return false;
@@ -34,20 +36,22 @@ public class LootListsService implements ILootLists {
 
     @Override
     public void removeLootList(LootList list) {
-        for (LootList l : lists.getLists()) {
+        for (Iterator<LootList> iterator = lists.getLists().iterator(); iterator.hasNext(); ) {
+            LootList l = iterator.next();
             if (list.getWorldId() == (l.getWorldId()) &&
                     list.getX() == l.getX() &&
                     list.getY() == l.getY() &&
                     list.getZ() == l.getZ()) {
-                lists.getLists().remove(l);
-                Logger.log("list removed! Coordinates: " + Logger.getCoordinatesString(list.getX(), list.getY(), list.getZ()));
+                iterator.remove();
+                Logger.debug("list removed! Coordinates: " + Logger.getCoordinatesString(list));
             }
         }
     }
 
     @Override
     public boolean listExist(LootList list) {
-        for (LootList l : lists.getLists()) {
+        for (Iterator<LootList> iterator = lists.getLists().iterator(); iterator.hasNext(); ) {
+            LootList l = iterator.next();
             if (list.getWorldId() == (l.getWorldId()) &&
                     list.getX() == l.getX() &&
                     list.getY() == l.getY() &&
@@ -70,12 +74,13 @@ public class LootListsService implements ILootLists {
 
     @Override
     public LootList findByName(String name) {
-        for (LootList list : lists.getLists()) {
+        for (Iterator<LootList> iterator = lists.getLists().iterator(); iterator.hasNext(); ) {
+            LootList list = iterator.next();
             if (list.getName().equals(name)) {
                 return list;
             }
         }
-        Logger.log("can't find Loot List by name: " + name);
+        Logger.error("can't find Loot List by name: " + name);
         return null;
     }
 }

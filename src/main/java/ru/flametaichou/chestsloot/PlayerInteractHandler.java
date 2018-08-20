@@ -5,8 +5,10 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockContainer;
 import net.minecraft.block.BlockSign;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.tileentity.TileEntitySign;
+import net.minecraft.util.ChatComponentText;
 import net.minecraft.world.World;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.world.BlockEvent;
@@ -62,7 +64,7 @@ public class PlayerInteractHandler {
         }
     }
 
-    private void removeChestSign(String[] lines, int x, int y, int z, int worldId) {
+    private void removeChestSign(String[] lines, int x, int y, int z, int worldId, EntityPlayer player) {
         try {
             String listName = lines[1];
             long cooldown = Long.parseLong(lines[2]);
@@ -71,8 +73,10 @@ public class PlayerInteractHandler {
             int maxCount = Integer.parseInt(minmaxcount[1]);
             ChestSign chestSign = new ChestSign(x, y, z, worldId, -cooldown, cooldown, listName, minCount, maxCount);
             LootChestsBase.chestSignsService.removeChestSign(chestSign);
+            player.addChatComponentMessage(new ChatComponentText("Chest Sign removed!"));
         } catch (Exception e) {
             Logger.error("can't remove chest. Coordinates: " + Logger.getCoordinatesString(x, y ,z) + " Reason: " + e.getCause());
+            player.addChatComponentMessage(new ChatComponentText("Error! Chest Sign not removed!"));
         }
     }
 
@@ -86,13 +90,15 @@ public class PlayerInteractHandler {
         }
     }
 
-    private void removeList(String[] lines, int x, int y, int z, int worldId) {
+    private void removeList(String[] lines, int x, int y, int z, int worldId, EntityPlayer player) {
         try {
             String listName = lines[1];
             LootList list = new LootList(listName, x, y, z, worldId);
             LootChestsBase.lootListsService.removeLootList(list);
+            player.addChatComponentMessage(new ChatComponentText("Loot List removed!"));
         } catch (Exception e) {
-            Logger.error("can't remove list. Coordinates: " + Logger.getCoordinatesString(x, y ,z) + " Reason: " + e.getMessage());
+            Logger.error("can't remove list. Coordinates: " + Logger.getCoordinatesString(x, y ,z) + " Reason: " + e.getCause());
+            player.addChatComponentMessage(new ChatComponentText("Error! Loot List not removed!"));
         }
     }
 
@@ -135,9 +141,9 @@ public class PlayerInteractHandler {
             TileEntitySign sign = (TileEntitySign) event.world.getTileEntity(event.x, event.y ,event.z);
             String[] signText = sign.signText;
             if (signText[0].contains("[Loot]")) {
-                removeChestSign(signText, event.x, event.y ,event.z, event.world.provider.dimensionId);
+                removeChestSign(signText, event.x, event.y ,event.z, event.world.provider.dimensionId, event.getPlayer());
             } else if (signText[0].contains("[List]")) {
-                removeList(signText, event.x, event.y ,event.z, event.world.provider.dimensionId);
+                removeList(signText, event.x, event.y ,event.z, event.world.provider.dimensionId, event.getPlayer());
             }
         }
     }

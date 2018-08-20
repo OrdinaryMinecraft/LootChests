@@ -13,6 +13,7 @@ import net.minecraft.world.World;
 import ru.flametaichou.chestsloot.model.ChestSign;
 import ru.flametaichou.chestsloot.model.LootList;
 
+import java.security.spec.ECField;
 import java.util.*;
 
 public class WorldEventHandler {
@@ -44,20 +45,28 @@ public class WorldEventHandler {
                         player.addChatComponentMessage(new ChatComponentText("You cant create Loot Signs!"));
                     } else {
                         if (sign.signText[0].contains("[Loot]")) {
-                            String listName = sign.signText[1];
-                            long cooldown = Long.parseLong(sign.signText[2]);
-                            String[] minmaxcount = sign.signText[3].split("-");
-                            int minCount = Integer.parseInt(minmaxcount[0]);
-                            int maxCount = Integer.parseInt(minmaxcount[1]);
-                            ChestSign chestSign = new ChestSign(sign.xCoord, sign.yCoord, sign.zCoord, sign.getWorldObj().provider.dimensionId, -cooldown, cooldown, listName, minCount, maxCount);
-                            if (LootChestsBase.chestSignsService.addChestSign(chestSign, true)) {
-                                player.addChatComponentMessage(new ChatComponentText("Chest Sign created!"));
+                            try {
+                                String listName = sign.signText[1];
+                                long cooldown = Long.parseLong(sign.signText[2]);
+                                String[] minmaxcount = sign.signText[3].split("-");
+                                int minCount = Integer.parseInt(minmaxcount[0]);
+                                int maxCount = Integer.parseInt(minmaxcount[1]);
+                                ChestSign chestSign = new ChestSign(sign.xCoord, sign.yCoord, sign.zCoord, sign.getWorldObj().provider.dimensionId, -cooldown, cooldown, listName, minCount, maxCount);
+                                if (LootChestsBase.chestSignsService.addChestSign(chestSign, true)) {
+                                    player.addChatComponentMessage(new ChatComponentText("Chest Sign created!"));
+                                }
+                            } catch (Exception e) {
+                                player.addChatComponentMessage(new ChatComponentText("Error! Chest Sign not created."));
                             }
                         } else if (sign.signText[0].contains("[List]")) {
-                            String listName = sign.signText[1];
-                            LootList lootList = new LootList(listName, sign.xCoord, sign.yCoord, sign.zCoord, sign.getWorldObj().provider.dimensionId);
-                            if (LootChestsBase.lootListsService.addLootList(lootList, true)) {
-                                player.addChatComponentMessage(new ChatComponentText("Loot List created!"));
+                            try {
+                                String listName = sign.signText[1];
+                                LootList lootList = new LootList(listName, sign.xCoord, sign.yCoord, sign.zCoord, sign.getWorldObj().provider.dimensionId);
+                                if (LootChestsBase.lootListsService.addLootList(lootList, true)) {
+                                    player.addChatComponentMessage(new ChatComponentText("Loot List created!"));
+                                }
+                            } catch (Exception e) {
+                                player.addChatComponentMessage(new ChatComponentText("Error! Loot List not created."));
                             }
                         }
                     }
@@ -76,12 +85,12 @@ public class WorldEventHandler {
 
     @SubscribeEvent(priority = EventPriority.LOW)
     public void fillChests(TickEvent.WorldTickEvent event) {
-        if (event.world.getWorldTime() % 1000 == 0) {
+        if (event.world.getWorldTime() % 100 == 0) {
             for (Iterator<ChestSign> iterator = LootChestsBase.chestSignsService.getChestGigns().iterator(); iterator.hasNext(); ) {
                 ChestSign chestSign = iterator.next();
                 World world = LootChestsBase.getWorld(chestSign.getWorldId());
-                long cooldownInTicks = chestSign.getCooldown() * 60 * 20;
-                Logger.log("worldtime " + world.getWorldTime() + " refreshTime " + chestSign.getRefreshTime() + " cooldown " + cooldownInTicks);
+                long cooldownInTicks = chestSign.getCooldown()  * 20;
+                Logger.debug("worldtime " + world.getWorldTime() + " refreshTime " + chestSign.getRefreshTime() + " cooldown " + cooldownInTicks);
                 if (world.getWorldTime() - chestSign.getRefreshTime() > cooldownInTicks) {
                     // Значит его надо наполнить
                     // Достаем список предметов
@@ -120,14 +129,31 @@ public class WorldEventHandler {
                         }
 
                         if (items.size() < 1) {
-                            Logger.log("can't find items in Loot List! Name: " + lootList.getName());
+                            Logger.error("can't find items in Loot List! Name: " + lootList.getName());
                             return;
                         }
 
+                        // Выбор рандомных слотов
+                        Set<Integer> randomSlots = new HashSet<Integer>();
+                        while (randomSlots.size() < count) {
+                            randomSlots.add(randomBetween(0, inventory.getSizeInventory() - 1));
+                        }
+                        Object[] randomSlotsArray = randomSlots.toArray();
+
+                        // Заполнение
                         for (int i = 0; i < count; i++) {
                             int itemNum = randomBetween(0, items.size() - 1);
-                            inventory.setInventorySlotContents(i, items.get(itemNum));
+                            if (ConfigHelper.percentBySlot) {
+                                // Чем выше предмет в сундуке тем выше вероятность спавна
+                                // У самого последнего предмета в списке вероятность появления 5% и растет к первому элементу списка
+                                if (Math.random() > 0.05) {
+                                    itemNum = randomBetween(0, itemNum);
+                                }
+                            }
+
+                            inventory.setInventorySlotContents((Integer)randomSlotsArray[i], items.get(itemNum));
                         }
+
                         chestSign.setRefreshTime(world.getWorldTime());
                     }
                 }
