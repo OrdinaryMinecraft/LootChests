@@ -13,7 +13,6 @@ import net.minecraft.world.World;
 import ru.flametaichou.chestsloot.model.ChestSign;
 import ru.flametaichou.chestsloot.model.LootList;
 
-import java.security.spec.ECField;
 import java.util.*;
 
 public class WorldEventHandler {
@@ -97,10 +96,26 @@ public class WorldEventHandler {
                     return;
                 }
                 World lootListWorld = LootChestsBase.getWorld(lootList.getWorldId());
-                // Берем вещи из всех контейнеров рядом с табличкой-листом
                 List<ItemStack> items = new ArrayList<ItemStack>();
-                List<IInventory> lootListInventories = findContainers(lootList.getX(), lootList.getY(), lootList.getZ(), lootListWorld);
-                for (IInventory lootInventory : lootListInventories) {
+                if (ConfigHelper.getItemsFromAllChestsNearListSign) {
+                    // Берем вещи из всех контейнеров рядом с табличкой-листом
+                    List<IInventory> lootListInventories = findContainers(lootList.getX(), lootList.getY(), lootList.getZ(), lootListWorld);
+                    for (IInventory lootInventory : lootListInventories) {
+                        for (int i = 0; i < lootInventory.getSizeInventory(); i++) {
+                            if (Objects.nonNull(lootInventory.getStackInSlot(i))) {
+                                ItemStack is = lootInventory.getStackInSlot(i).copy();
+                                int lootCount = randomBetween(1, is.stackSize);
+                                is.stackSize = lootCount;
+                                items.add(is);
+                            }
+                        }
+                    }
+                } else {
+                    // Берем вещи только из сундука под табличкой-листом
+                    IInventory lootInventory = (IInventory) lootListWorld.getTileEntity(lootList.getX(), lootList.getY() - 1, lootList.getZ());
+                    if (Objects.isNull(lootInventory)) {
+                        Logger.error("Loot List container not found. Coordinates: " + Logger.getCoordinatesString(lootList));
+                    }
                     for (int i = 0; i < lootInventory.getSizeInventory(); i++) {
                         if (Objects.nonNull(lootInventory.getStackInSlot(i))) {
                             ItemStack is = lootInventory.getStackInSlot(i).copy();
@@ -109,6 +124,12 @@ public class WorldEventHandler {
                             items.add(is);
                         }
                     }
+                }
+
+                // Если в списке вещей нет ни одной вещи
+                if (items.size() < 1) {
+                    Logger.error("can't find items in Loot List! Name: " + lootList.getName());
+                    return;
                 }
 
                 // Теперь ищем все контейнеры в радиусе 1 блока
@@ -126,30 +147,26 @@ public class WorldEventHandler {
                         count = inventory.getSizeInventory();
                     }
 
-                    if (items.size() < 1) {
-                        Logger.error("can't find items in Loot List! Name: " + lootList.getName());
-                        return;
-                    }
-
-                    // Выбор рандомных слотов
+                    // Выбор рандомных слотов для заполнения
                     Set<Integer> randomSlots = new HashSet<Integer>();
                     while (randomSlots.size() < count) {
                         randomSlots.add(randomBetween(0, inventory.getSizeInventory() - 1));
                     }
                     Object[] randomSlotsArray = randomSlots.toArray();
 
-                    // Заполнение
+                    // Наполнение
                     for (int i = 0; i < count; i++) {
                         int itemNum = randomBetween(0, items.size() - 1);
                         if (ConfigHelper.percentBySlot) {
                             // Чем выше предмет в сундуке тем выше вероятность спавна
-                            // У самого последнего предмета в списке вероятность появления 5% и растет к первому элементу списка
-                            if (Math.random() > 0.05) {
+                            // У самого последнего предмета в списке вероятность появления равна lastItemInListPercent
+                            // и растет к первому элементу списка.
+                            if (Math.random() > ConfigHelper.lastItemInListPercent) {
                                 itemNum = randomBetween(0, itemNum);
                             }
                         }
 
-                        inventory.setInventorySlotContents((Integer)randomSlotsArray[i], items.get(itemNum));
+                        inventory.setInventorySlotContents((Integer)randomSlotsArray[i], items.get(itemNum).copy());
                     }
 
                     chestSign.setRefreshTime(world.getWorldTime());
