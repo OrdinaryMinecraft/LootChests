@@ -91,7 +91,7 @@ public class WorldEventHandler {
             if (world.getWorldTime() - chestSign.getRefreshTime() > cooldownInTicks) {
                 // Значит его надо наполнить
                 // Достаем список предметов
-                LootList lootList = LootChestsBase.lootListsService.findByName(chestSign.getListName());
+                LootList lootList = LootChestsBase.lootListsService.findByName(chestSign);
                 if (Objects.isNull(lootList)) {
                     return;
                 }

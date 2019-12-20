@@ -50,7 +50,7 @@ public class LootChestsBase {
 		try {
 			JAXBContext jc = JAXBContext.newInstance(LootListsXml.class);
 			Unmarshaller unmarshaller = jc.createUnmarshaller();
-			File file = new File("lists.xml");
+			File file = new File("config/lists.xml");
 			if (file.exists()) {
 				lootListsService.setLootListsXML((LootListsXml) unmarshaller.unmarshal(new FileReader("config/lists.xml")));
 				for (LootList list : lootListsService.getLootListsXML().getLists()) {

@@ -5,6 +5,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntitySign;
 import ru.flametaichou.chestsloot.LootChestsBase;
 import ru.flametaichou.chestsloot.Logger;
+import ru.flametaichou.chestsloot.model.ChestSign;
 import ru.flametaichou.chestsloot.model.LootList;
 import ru.flametaichou.chestsloot.model.LootListsXml;
 
@@ -77,14 +78,14 @@ public class LootListsService implements ILootLists {
     }
 
     @Override
-    public LootList findByName(String name) {
+    public LootList findByName(ChestSign sign) {
         for (Iterator<LootList> iterator = lists.getLists().iterator(); iterator.hasNext(); ) {
             LootList list = iterator.next();
-            if (list.getName().equals(name)) {
+            if (list.getName().equals(sign.getListName())) {
                 return list;
             }
         }
-        Logger.error("can't find Loot List by name: " + name);
+        Logger.error("can't find Loot List by name: " + sign.getListName() + "! Coordinates: " + Logger.getCoordinatesString(sign));
         return null;
     }
 }

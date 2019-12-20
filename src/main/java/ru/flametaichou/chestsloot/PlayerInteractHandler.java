@@ -7,6 +7,8 @@ import net.minecraft.block.BlockContainer;
 import net.minecraft.block.BlockSign;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntitySign;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.world.World;
@@ -23,8 +25,8 @@ public class PlayerInteractHandler {
     public void onInteract(PlayerInteractEvent event) {
         if (event.action == PlayerInteractEvent.Action.RIGHT_CLICK_BLOCK) {
             // Если кликнули по контейнеру
-            Block block = event.world.getBlock(event.x,event.y,event.z);
-            if (block instanceof BlockContainer) {
+            TileEntity te = event.world.getTileEntity(event.x,event.y,event.z);
+            if (Objects.nonNull(te) && te instanceof IInventory) {
                 // Ищем таблички
                 checkForSigns(event.x, event.y, event.z, event.world);
             }
